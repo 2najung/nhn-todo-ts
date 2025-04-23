@@ -7,8 +7,12 @@ import ClearCompleted from "./components/ClearCompleted";
 import { Todo, FilterState } from "./types";
 
 let todos: Todo[] = [];
-const stats = Stats();
+let previewBackup: Todo[] = [];
 let filterState: FilterState = "all";
+let currentPreviewSrc: number | null = null;
+let previewTargetIdx: number | null = null;
+
+const stats = Stats();
 const filterComp = filter((newState) => {
   filterState = newState;
   render();
@@ -35,12 +39,48 @@ Input((text) => {
   render();
 });
 
+const renderPreview = (srcIdx: number, targetIdx: number) => {
+  if (!previewBackup.length) {
+    previewBackup = [...todos];
+    currentPreviewSrc = srcIdx;
+  }
+
+  todos = [...previewBackup];
+
+  const [moved] = todos.splice(currentPreviewSrc!, 1);
+  todos.splice(targetIdx, 0, moved);
+  previewTargetIdx = targetIdx;
+  render(true);
+};
+
+const cancelPreview = () => {
+  if (previewBackup.length) {
+    todos = [...previewBackup];
+    render();
+    previewBackup = [];
+    currentPreviewSrc = null;
+    previewTargetIdx = null;
+  }
+};
+
 const list = List(
   (id) => toggleTodo(id),
-  (id) => deleteTodo(id)
+  (id) => deleteTodo(id),
+  (srcIdx, targetIdx) => {
+    const base = previewBackup.length ? previewBackup : todos;
+    todos = [...base];
+    const [moved] = todos.splice(srcIdx, 1);
+    todos.splice(targetIdx, 0, moved);
+    previewBackup = [];
+    currentPreviewSrc = null;
+    previewTargetIdx = null;
+    render();
+  },
+  renderPreview,
+  cancelPreview
 );
 
-const render = () => {
+const render = (isPreview = false) => {
   const allActive = todos.filter((t) => !t.completed);
   const allCompleted = todos.filter((t) => t.completed);
   const completedCount = allCompleted.length;
@@ -53,6 +93,15 @@ const render = () => {
 
   list.render(filtered);
 
+  if (isPreview && previewTargetIdx !== null) {
+    const li = document.querySelector(
+      `#todo-list li[data-idx=\"${previewTargetIdx}\"]`
+    );
+    if (li) {
+      li.classList.add("previewed");
+    }
+  }
+
   const countToShow =
     filterState === "all"
       ? todos.length
@@ -63,6 +112,8 @@ const render = () => {
   stats.render(countToShow);
   filterComp.render(filterState);
   clearCompleted.render(completedCount);
+
+  if (!isPreview) previewBackup = [];
 };
 
 function toggleTodo(id: number) {

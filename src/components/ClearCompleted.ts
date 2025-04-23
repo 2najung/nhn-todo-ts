@@ -1,5 +1,3 @@
-// src/components/ClearCompleted.ts
-
 export interface ClearCompletedComponent {
   element: HTMLButtonElement;
   render: (completedCount: number) => void;
@@ -12,6 +10,7 @@ const ClearCompleted = (onClear: () => void): ClearCompletedComponent => {
 
   const render = (completedCount: number) => {
     btn.textContent = `Clear Completed (${completedCount})`;
+    btn.disabled = completedCount === 0;
   };
 
   return { element: btn, render };

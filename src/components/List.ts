@@ -1,4 +1,5 @@
 import { Todo, ReorderHandler } from "../types";
+import useDragAndDrop from "./useDragAndDrop";
 
 export interface ListComponent {
   element: HTMLUListElement;
@@ -8,9 +9,15 @@ export interface ListComponent {
 const List = (
   onToggle: (id: number) => void,
   onDelete: (id: number) => void,
-  onReorder?: ReorderHandler
+  onReorder?: ReorderHandler,
+  renderPreview?: (srcIdx: number, targetIdx: number) => void,
+  cancelPreview?: () => void
 ): ListComponent => {
   const listEl = document.getElementById("todo-list") as HTMLUListElement;
+  const dnd =
+    onReorder && renderPreview && cancelPreview
+      ? useDragAndDrop(listEl, onReorder, renderPreview, cancelPreview)
+      : null;
 
   const render = (todos: Todo[]) => {
     listEl.innerHTML = "";
@@ -36,6 +43,10 @@ const List = (
       btn.addEventListener("click", () => onDelete(todo.id));
 
       li.append(checkbox, span, btn);
+      if (!todo.completed && dnd) {
+        dnd.attach(li);
+      }
+
       listEl.appendChild(li);
     });
   };
